@@ -16,19 +16,44 @@ jobs:
         node-version: [12.x]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+name: Upload Website
 
-    - name: Set up Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
+on:
+ push:
+   branches:
+     - main
+
+jobs:
+ Deploy:
+   runs-on: ubuntu-latest
+   steps:
+     - name: Checkout
+       uses: actions/checkout@v2
+
+     - name: Setup node
+       uses: actions/setup-node@v2
+     - name: Checkout repository
+       uses: actions/checkout@v2
+
+     - name: Set up Node.js ${{ matrix.node-version }}
+       uses: actions/setup-node@v1
+       with:
         node-version: ${{ matrix.node-version }}
 
-    - name: Install dependencies
-      run: npm install
+     - name: Install dependencies
+       run: npm install
 
-    - name: Run the tests
-      run: npm test
+     - name: Run the tests
+       run: npm test
 
-    - name: Build
-      run: npm run build
+     - name: Build
+       run: npm run build
+     - name: Configure AWS Credentials
+       uses: aws-actions/configure-aws-credentials@v1
+       with:
+         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+         aws-region: us-east-1
+
+     - name: Deploy static site to S3 bucket
+       run: aws s3 cp ./build s3://$S3_BUCKET_NAME/ --recursive --include "*" 
