@@ -1,59 +1,38 @@
-name: CI/CD
+name: Deploy React Application
 
+# Controls when the action will run. 
 on:
+  # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  build:
-
+  build_test:
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [12.x]
+        node-version: [12.x] # We will deploy with only one version of node  
 
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-name: Upload Website
-
-on:
- push:
-   branches:
-     - main
-
-jobs:
- Deploy:
-   runs-on: ubuntu-latest
-   steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-
-     - name: Setup node
-       uses: actions/setup-node@v2
-     - name: Checkout repository
-       uses: actions/checkout@v2
-
-     - name: Set up Node.js ${{ matrix.node-version }}
-       uses: actions/setup-node@v1
-       with:
-        node-version: ${{ matrix.node-version }}
-
-     - name: Install dependencies
-       run: npm install
-
-     - name: Run the tests
-       run: npm test
-
-     - name: Build
-       run: npm run build
-     - name: Configure AWS Credentials
-       uses: aws-actions/configure-aws-credentials@v1
-       with:
-         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-         aws-region: us-east-1
-
-     - name: Deploy static site to S3 bucket
-       run: aws s3 cp ./build s3://$S3_BUCKET_NAME/ --recursive --include "*" 
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm ci, build and test
+        run: |
+          npm ci
+          npm run build --if-present
+          npm test      
+      - name: deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          publish_dir: ./build   
